@@ -31,6 +31,8 @@ parser.add_argument('-pitch_shift', '-ps', type=float, default=-3.0,
                     help='Pitch shift, values in (-5, +5) are okey')
 parser.add_argument('-reverse', action='store_true',
                     help='Use reverse effect')
+parser.add_argument('-use_sox', action='store_true',
+                    help='Use sox effects pipeline')
 
 params = parser.parse_args()
 
@@ -58,15 +60,12 @@ PITCH_STEPS = params.pitch_shift
 
 fx = (
     AudioEffectsChain()
-    # .echo()
-    # .highshelf()
-    .reverb(reverberance=100, hf_damping=100, pre_delay=20)
-    # .echo()
+    .speed(factor=0.8)
+    .reverb(reverberance=100, hf_damping=50, pre_delay=10)
+    # .noise_reduction(amount=0.5)
+    # .gain(-5)
     # .pitch(shift=+100)
-    # .phaser()
-    # .equalizer(70, db=+10)
-    # .delay()
-    # .lowshelf()
+    # .equalizer(30, db=-20)
 )
 
 
@@ -90,8 +89,14 @@ def microphone_callback(in_data, frame_count, time_info, status):
         # librosa effects
         y = librosa.effects.pitch_shift(y, sr, n_steps=PITCH_STEPS, res_type='kaiser_best')
 
+        # sox effects
+        if params.use_sox:
+            y = fx(y)
+
         if params.reverse:
             y = np.flip(y, axis=None)
+
+        # print(y.size)
 
         virtual_stream.write(y.tobytes())
 
